@@ -17,11 +17,14 @@ tauri-build = { version = "1.5.1", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.6.1", features = [] }
-rustube = "0.6.0"
+tauri = { version = "1.6.1", features = [ "dialog-save", "http-all", "fs-all", "shell-open"] }
 rusty_ytdl = "0.7.0"
 homedir = "0.2.1"
 directories = "5.0.1"
+reqwest = "=0.10.10"
+rustube = "0.6.0"
+rodio = "0.17.3"
+ffmpeg-cli = "0.1.0"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.
