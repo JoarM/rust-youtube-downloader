@@ -22,8 +22,6 @@ export default function Page() {
     const [audioName, setAudioName] = useState("");
     const [quality, setQuality] = useState<undefined | string>(undefined);
     const [downloading, setDownloading] = useState(false);
-    const [message, setMessage] = useState("");
-    const [downloadError, setDownloadError] = useState("");
 
     function getVideoInfo() {
         if (!url.trim() || searching) return;
@@ -48,16 +46,22 @@ export default function Page() {
     async function downloadVideo() {
         if (!video) return;
         const format = video.formats.findLast((format) => format.qualityLabel === quality);
-        if (!format) return
+        if (!format) return;
+        if (!videoName) {
+            toast.warning("Please enter a filename");
+            return;
+        }
         setDownloading(true);
         
         invoke("video", { url: video.videoDetails.videoUrl, name: videoName, itag: format.itag })
         .then((e) => {
-            setMessage(e as string);
-            setDownloadError("");
+            toast.success("Video downloaded", {
+                description: e as string,
+            });
         }).catch((e) => {
-            setMessage("");
-            setDownloadError(e as string);
+            toast.error("Download failed", {
+                description: e as string,
+            });
         }).finally(() => {
             setDownloading(false);
         });
@@ -65,12 +69,20 @@ export default function Page() {
 
     function downloadAudio() {
         if (!video) return;
+        if (!audioName) {
+            toast.warning("Please enter a filename");
+            return;
+        }
         setDownloading(true);
         invoke("audio", { url: video.videoDetails.videoUrl, name: audioName })
         .then((e) => {
-            console.log(e);
-        }).catch(() => {
-            console.log("fail");
+            toast.success("Video downloaded", {
+                description: e as string,
+            });
+        }).catch((e) => {
+            toast.error("Download failed", {
+                description: e as string,
+            });
         }).finally(() => {
             setDownloading(false);
         });
@@ -108,7 +120,7 @@ export default function Page() {
                     Search
                 </Button>
             </form>
-            {video && (
+            {video ? (
                 <main className="mt-6 flex flex-col lg:flex-row items-start gap-4">
                     <div className="flex-grow w-full lg:w-auto">
                         <iframe className="w-full aspect-video rounded-lg" src={video.videoDetails.embed.iframeUrl} title={video.videoDetails.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe>
@@ -211,7 +223,7 @@ export default function Page() {
                                 </TabsContent>
                             </Tabs>
                         </CardContent>
-                        <CardFooter>
+                        <CardFooter className="block">
                             <Button 
                             form="download" 
                             className="w-full"
@@ -224,11 +236,11 @@ export default function Page() {
                                 )}
                                 Download
                             </Button>
-                            {message && <p className="text-sm font-medium">{message}</p>}
-                            {downloadError && <p className="text-sm font-medium text-destructive">{downloadError}</p>}
                         </CardFooter>
                     </Card>
                 </main>
+            ) : (
+                <p className="text-lg text-center mt-12 text-muted-foreground">Enter a URL above to get started.</p>
             )}
         </div>
     )

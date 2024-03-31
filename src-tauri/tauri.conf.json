@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "youtube-downloader",
-    "version": "0.1.0"
+    "version": "1.0.0"
   },
   "tauri": {
     "allowlist": {
@@ -17,20 +17,7 @@
         "all": false,
         "execute": false,
         "open": true,
-        "scope": [],
         "sidecar": false
-      },
-      "http": {
-        "all": true,
-        "request": true,
-        "scope": ["https://**/*"]
-      },
-      "fs": {
-        "all": true,
-        "scope": ["$APP/*", "$APP"]
-      },
-      "dialog": {
-        "save": true
       }
     },
     "bundle": {

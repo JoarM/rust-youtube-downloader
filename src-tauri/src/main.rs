@@ -7,10 +7,13 @@ use std::sync::Arc;
 use rusty_ytdl::{Video, VideoFormat, VideoInfo};
 use rusty_ytdl::{VideoOptions,VideoQuality,VideoSearchOptions};
 use directories::UserDirs;
-use ffmpeg_cli::{FfmpegBuilder, File};
+//use ffmpeg_cli::{FfmpegBuilder, File};
 use std::fs;
+use ffmpeg_sidecar::command::FfmpegCommand;
+
 
 fn main() {
+  ffmpeg_sidecar::download::auto_download().unwrap();
   tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![video, audio, get_video_info])
     .run(tauri::generate_context!())
@@ -50,11 +53,13 @@ async fn video(url: String, name: String, itag: u64) -> Result<String, String> {
 
   let audio = Video::new_with_options(&url, audio_options);
   if audio.is_err() {
+    let _ = fs::remove_file("video.mp4");
     return Err("Failed to find video".to_string());
   }
 
   let audio_dwnld = audio.unwrap().download("audio.mp3").await;
   if audio_dwnld.is_err() {
+    let _ = fs::remove_file("video.mp4");
     return Err("Failed to download audio".to_string());
   }
 
@@ -63,6 +68,8 @@ async fn video(url: String, name: String, itag: u64) -> Result<String, String> {
   
   let output = combine_mp4_and_mp3("video.mp4", "audio.mp3", &path.to_str().unwrap()).await;
   if output.is_err() {
+    let _ = fs::remove_file("video.mp4");
+    let _ = fs::remove_file("audio.mp3");
     return Err("Failed to combine video and audio stream".to_string());
   }
   
@@ -74,21 +81,28 @@ async fn video(url: String, name: String, itag: u64) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn audio(url: String, name: String) -> String {
+async fn audio(url: String, name: String) -> Result<String, String> {
   let video_options = VideoOptions {
     quality: VideoQuality::Highest,
     filter: VideoSearchOptions::Audio,
     ..Default::default()
   };
 
-  let video = Video::new_with_options(url, video_options).unwrap();
+  let video = Video::new_with_options(url, video_options);
+  if video.is_err() {
+    return Err("Failed to get video".to_string());
+  }
 
   let pathname = format!("{}.mp3", name);
   let path = UserDirs::new().unwrap().download_dir().unwrap().join(std::path::Path::new(&pathname));
   let path_string = format!("Downloaded to: {:?}", path.to_str().unwrap());
   
-  video.download(path).await.unwrap();
-  path_string
+  let video_dwnld = video.unwrap().download(path).await;
+  if video_dwnld.is_err() {
+    return Err("Failed to download audio".to_string());
+  }
+
+  Ok(path_string)
 }
 
 #[tauri::command]
@@ -104,14 +118,26 @@ async fn get_video_info(url: String) -> Result<VideoInfo, String> {
   Ok(video.get_info().await.unwrap())
 }
 
+
+
 async fn combine_mp4_and_mp3(mp4_path: &str, mp3_path: &str, output_path: &str) -> Result<String, ()> {
-  let builder = FfmpegBuilder::new().input(File::new(mp4_path)).input(File::new(mp3_path)).output(File::new(output_path));
-  let ffmpeg = builder.run().await;
+  let ffmpeg = FfmpegCommand::new()
+  .input(mp4_path)
+  .input(mp3_path)
+  .args(["-c", "copy"])
+  .output(output_path)
+  .spawn();
+
   if ffmpeg.is_err() {
     return Err(());
   }
-  let output = ffmpeg.unwrap().process.wait_with_output();
-  if output.is_err() {
+
+  let mut child = ffmpeg.unwrap();
+  let res = child.wait();
+  if res.is_err() {
+    return Err(());
+  }
+  if !res.unwrap().success() {
     return Err(());
   }
   Ok(output_path.to_string())
