@@ -7,7 +7,6 @@ use std::sync::Arc;
 use rusty_ytdl::{Video, VideoFormat, VideoInfo};
 use rusty_ytdl::{VideoOptions,VideoQuality,VideoSearchOptions};
 use directories::UserDirs;
-//use ffmpeg_cli::{FfmpegBuilder, File};
 use std::fs;
 use ffmpeg_sidecar::command::FfmpegCommand;
 
